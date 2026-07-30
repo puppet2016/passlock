@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Passlock — The offline, zero-knowledge password manager. GUI + CLI. Built with Rust. No cloud. No subscription. Just security.">
+    <title>Passlock — Offline Password Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #111118;
+            --bg-card: #16161f;
+            --bg-card-hover: #1c1c28;
+            --border: #252530;
+            --text-primary: #f0f0f5;
+            --text-secondary: #a0a0b5;
+            --text-muted: #6b6b80;
+            --accent: #6c5ce7;
+            --accent-glow: rgba(108, 92, 231, 0.35);
+            --accent-light: #a29bfe;
+            --green: #00cec9;
+            --green-glow: rgba(0, 206, 201, 0.3);
+            --orange: #fdcb6e;
+            --orange-glow: rgba(253, 203, 110, 0.25);
+            --red: #ff7675;
+            --gradient-hero: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 40%, #00cec9 100%);
+            --gradient-card: linear-gradient(180deg, rgba(108, 92, 231, 0.06) 0%, rgba(108, 92, 231, 0.01) 100%);
+            --radius: 12px;
+            --radius-lg: 20px;
+            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html {
+            scroll-behavior: smooth;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* ─── Grid Background ─── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(108, 92, 231, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(108, 92, 231, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ─── Container ─── */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 32px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ─── Navigation ─── */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+            font-size: 1.25rem;
+            letter-spacing: -0.02em;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+
+        .nav-logo-icon {
+            width: 34px;
+            height: 34px;
+            background: var(--gradient-hero);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .nav-links a:hover { color: var(--text-primary); }
+
+        .nav-cta {
+            background: var(--accent);
+            color: #fff !important;
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .nav-cta:hover {
+            background: #7c6ff0;
+            box-shadow: 0 0 24px var(--accent-glow);
+        }
+
+        /* ─── Hero ─── */
+        .hero {
+            padding: 180px 0 100px;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(108, 92, 231, 0.1);
+            border: 1px solid rgba(108, 92, 231, 0.25);
+            border-radius: 100px;
+            padding: 6px 18px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--accent-light);
+            margin-bottom: 28px;
+        }
+
+        .hero-badge-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { box-shadow: 0 0 0 0 var(--green-glow); }
+            50% { box-shadow: 0 0 0 8px rgba(0, 206, 201, 0); }
+        }
+
+        .hero h1 {
+            font-size: clamp(2.8rem, 6vw, 4.5rem);
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+            margin-bottom: 24px;
+        }
+
+        .hero h1 .gradient-text {
+            background: var(--gradient-hero);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 48px;
+            line-height: 1.7;
+        }
+
+        .hero-buttons {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 4px 24px var(--accent-glow);
+        }
+
+        .btn-primary:hover {
+            background: #7c6ff0;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px var(--accent-glow);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--text-muted);
+            transform: translateY(-2px);
+        }
+
+        .btn-icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        .hero-platform {
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .hero-platform svg { width: 16px; height: 16px; opacity: 0.6; }
+
+        /* ─── Section ─── */
+        .section {
+            padding: 100px 0;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 72px;
+        }
+
+        .section-header h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 16px;
+        }
+
+        .section-header p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 560px;
+            margin: 0 auto;
+        }
+
+        .section-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--accent-light);
+            margin-bottom: 12px;
+        }
+
+        /* ─── Features Grid ─── */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 36px 32px;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--gradient-hero);
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .feature-card:hover {
+            background: var(--bg-card-hover);
+            border-color: rgba(108, 92, 231, 0.3);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .feature-card:hover::before { opacity: 1; }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+        }
+
+        .feature-icon.purple { background: rgba(108, 92, 231, 0.15); color: var(--accent-light); }
+        .feature-icon.green  { background: rgba(0, 206, 201, 0.12); color: var(--green); }
+        .feature-icon.orange { background: rgba(253, 203, 110, 0.12); color: var(--orange); }
+        .feature-icon.red    { background: rgba(255, 118, 117, 0.12); color: var(--red); }
+
+        .feature-card h3 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: -0.01em;
+        }
+
+        .feature-card p {
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            line-height: 1.65;
+        }
+
+        /* ─── Highlight Strip ─── */
+        .highlight-strip {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            padding: 80px 0;
+        }
+
+        .highlight-strip .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+        }
+
+        .highlight-image {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            position: relative;
+        }
+
+        .terminal-window {
+            background: #0d0d14;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .terminal-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 18px;
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .terminal-dot.red    { background: #ff5f57; }
+        .terminal-dot.orange { background: #febc2e; }
+        .terminal-dot.green  { background: #28c840; }
+
+        .terminal-body {
+            padding: 20px;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            line-height: 1.8;
+            color: var(--text-secondary);
+        }
+
+        .terminal-body .prompt  { color: var(--green); }
+        .terminal-body .command { color: var(--text-primary); }
+        .terminal-body .comment { color: var(--text-muted); }
+        .terminal-body .output  { color: var(--accent-light); }
+
+        .highlight-text h3 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 16px;
+        }
+
+        .highlight-text p {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+            line-height: 1.7;
+            margin-bottom: 24px;
+        }
+
+        .highlight-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .highlight-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        .highlight-list li::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            min-width: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+            margin-top: 9px;
+        }
+
+        /* ─── Tech Specs ─── */
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+        }
+
+        .tech-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px 24px;
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .tech-card:hover {
+            background: var(--bg-card-hover);
+            transform: translateY(-2px);
+        }
+
+        .tech-card .tech-value {
+            font-size: 1.8rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            margin-bottom: 6px;
+            background: var(--gradient-hero);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .tech-card .tech-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* ─── CTA ─── */
+        .cta-section {
+            padding: 100px 0 120px;
+            text-align: center;
+        }
+
+        .cta-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 64px 48px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .cta-card > * { position: relative; z-index: 1; }
+
+        .cta-card h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 16px;
+        }
+
+        .cta-card p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 40px;
+        }
+
+        .cta-buttons {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn-large {
+            padding: 18px 40px;
+            font-size: 1.1rem;
+            border-radius: 14px;
+        }
+
+        /* ─── Footer ─── */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 40px 0;
+            text-align: center;
+        }
+
+        footer .container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        footer .copyright {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        footer .footer-links {
+            display: flex;
+            gap: 24px;
+            list-style: none;
+        }
+
+        footer .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: var(--transition);
+        }
+
+        footer .footer-links a:hover { color: var(--text-secondary); }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 1024px) {
+            .features-grid { grid-template-columns: repeat(2, 1fr); }
+            .tech-grid { grid-template-columns: repeat(2, 1fr); }
+            .highlight-strip .container { grid-template-columns: 1fr; gap: 48px; }
+        }
+
+        @media (max-width: 640px) {
+            .container { padding: 0 20px; }
+            .nav-inner { padding: 0 20px; }
+            .nav-links { display: none; }
+            .hero { padding: 140px 0 64px; }
+            .hero h1 { font-size: 2.2rem; }
+            .section { padding: 64px 0; }
+            .features-grid { grid-template-columns: 1fr; }
+            .tech-grid { grid-template-columns: 1fr 1fr; }
+            .cta-card { padding: 40px 24px; }
+            .cta-card h2 { font-size: 1.8rem; }
+            .section-header h2 { font-size: 1.8rem; }
+            footer .container { flex-direction: column; text-align: center; }
+        }
+
+        /* ─── Animations ─── */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate {
+            animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+        .delay-4 { animation-delay: 0.4s; }
+    </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav>
+    <div class="nav-inner">
+        <a href="#" class="nav-logo">
+            <span class="nav-logo-icon">&#x1F512;</span>
+            Passlock
+        </a>
+        <ul class="nav-links">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#security">Security</a></li>
+            <li><a href="#cli">CLI</a></li>
+            <li><a href="#download" class="nav-cta">Download</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+    <div class="container">
+        <div class="hero-badge animate">
+            <span class="hero-badge-dot"></span>
+            Offline &amp; Zero-Knowledge
+        </div>
+        <h1 class="animate delay-1">
+            Your Passwords,<br>
+            <span class="gradient-text">Your Control.</span>
+        </h1>
+        <p class="hero-subtitle animate delay-2">
+            A modern password manager built for privacy. 100% offline, zero-knowledge encryption,
+            with both a polished GUI and a powerful CLI. No cloud. No subscription. Just security.
+        </p>
+        <div class="hero-buttons animate delay-3">
+            <a href="#download" class="btn btn-primary btn-large">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download for Windows
+            </a>
+            <a href="#purchase" class="btn btn-secondary btn-large">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="1" y="1" width="22" height="22" rx="4" ry="4"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+                </svg>
+                Buy License
+            </a>
+        </div>
+        <p class="hero-platform animate delay-4">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+            Currently available for Windows. macOS &amp; Linux coming soon.
+        </p>
+    </div>
+</section>
+
+<!-- Features -->
+<section class="section" id="features">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-label">Features</div>
+            <h2>Built for Privacy-First Users</h2>
+            <p>Everything you need to manage passwords securely — without ever trusting a third party.</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon purple">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                </div>
+                <h3>100% Offline</h3>
+                <p>Your data never leaves your device. No cloud servers, no sync, no telemetry. What happens on your machine stays on your machine.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon green">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+                    </svg>
+                </div>
+                <h3>Zero-Knowledge Encryption</h3>
+                <p>We can't see your passwords — and neither can anyone else. Argon2id key derivation + AES-256-GCM encryption with a verifier that never touches disk.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon orange">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                    </svg>
+                </div>
+                <h3>GUI + CLI</h3>
+                <p>One binary, two interfaces. Use the polished Slint-based GUI for daily browsing, or the full-featured CLI for scripting and automation. No compromises.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon red">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
+                    </svg>
+                </div>
+                <h3>Smart Password Generator</h3>
+                <p>Generate strong, cryptographically random passwords with real-time strength evaluation. Customize length, character sets, and exclude ambiguous characters.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon purple">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                </div>
+                <h3>Password Rotation Reminders</h3>
+                <p>Set per-entry rotation intervals. The GUI checks on startup and gently reminds you when it's time to update your passwords — no background daemons, no system notifications.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon green">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M9 12l2 2 4-4"/>
+                    </svg>
+                </div>
+                <h3>Encrypted Backup &amp; Restore</h3>
+                <p>Export your vault as an encrypted backup file. Import with merge or replace strategies. Safe migration between machines — no cloud required.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Security Highlight -->
+<section class="highlight-strip" id="security">
+    <div class="container">
+        <div class="highlight-text">
+            <div class="section-label">Security</div>
+            <h3>Military-Grade Encryption,<br>Zero Trust Required</h3>
+            <p>
+                Passlock is built on a foundation of proven cryptographic primitives. Your master password is never stored, never transmitted, and never recoverable by anyone but you.
+            </p>
+            <ul class="highlight-list">
+                <li><strong>Argon2id</strong> — Memory-hard key derivation (64 MiB) with configurable passes, resistant to GPU/ASIC attacks</li>
+                <li><strong>AES-256-GCM</strong> — Authenticated encryption with AAD binding to prevent tampering and downgrade attacks</li>
+                <li><strong>HMAC-SHA256 Verifier</strong> — Constant-time master password verification separate from the GCM tag</li>
+                <li><strong>OS-Level Entropy</strong> — All random numbers sourced from the operating system's secure RNG</li>
+                <li><strong>Memory Safety</strong> — Written in Rust with <code>Zeroizing</code> wrappers for sensitive data</li>
+            </ul>
+        </div>
+        <div class="highlight-image">
+            <div class="terminal-window">
+                <div class="terminal-header">
+                    <span class="terminal-dot red"></span>
+                    <span class="terminal-dot orange"></span>
+                    <span class="terminal-dot green"></span>
+                </div>
+                <div class="terminal-body">
+                    <span class="comment"># Vault file structure (on disk)</span><br>
+                    {<br>
+                    &nbsp;&nbsp;<span class="output">"version"</span>: 2,<br>
+                    &nbsp;&nbsp;<span class="output">"salt"</span>: <span class="comment">"base64..."</span>,<br>
+                    &nbsp;&nbsp;<span class="output">"kdf"</span>: {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;"name": <span class="output">"argon2id"</span>,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;"mem_cost": <span class="prompt">65536</span>,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;"time_cost": <span class="prompt">2</span><br>
+                    &nbsp;&nbsp;},<br>
+                    &nbsp;&nbsp;<span class="output">"verifier"</span>: <span class="comment">"HMAC-SHA256"</span>,<br>
+                    &nbsp;&nbsp;<span class="output">"ciphertext"</span>: <span class="comment">"AES-256-GCM"</span><br>
+                    }<br>
+                    <br>
+                    <span class="comment"># Everything is encrypted at rest.</span><br>
+                    <span class="comment"># No plaintext ever touches disk.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CLI Highlight -->
+<section class="highlight-strip" id="cli" style="background: var(--bg-primary);">
+    <div class="container">
+        <div class="highlight-image">
+            <div class="terminal-window">
+                <div class="terminal-header">
+                    <span class="terminal-dot red"></span>
+                    <span class="terminal-dot orange"></span>
+                    <span class="terminal-dot green"></span>
+                </div>
+                <div class="terminal-body">
+                    <span class="prompt">$</span> <span class="command">passlock add github -u myuser</span><br>
+                    <span class="comment">Enter password: ********</span><br>
+                    <span class="output">Entry added: github</span><br>
+                    <br>
+                    <span class="prompt">$</span> <span class="command">passlock generate -l 24</span><br>
+                    <span class="output">xK9#mP2$vL7@qR4!nW8&cF3^</span><br>
+                    <br>
+                    <span class="prompt">$</span> <span class="command">passlock list --filter git</span><br>
+                    <span class="output">github   myuser   github.com</span><br>
+                    <br>
+                    <span class="prompt">$</span> <span class="command">passlock get github -c</span><br>
+                    <span class="output">Password copied to clipboard</span><br>
+                </div>
+            </div>
+        </div>
+        <div class="highlight-text">
+            <div class="section-label">Power User Ready</div>
+            <h3>GUI or CLI —<br>You Choose</h3>
+            <p>
+                Passlock ships as a single binary with two interfaces. Launch without arguments for the polished GUI, or use the full-featured CLI for automation, scripting, and keyboard-driven workflows.
+            </p>
+            <ul class="highlight-list">
+                <li><strong>17+ CLI commands</strong> — add, get, edit, delete, list, search, generate, export, import, and more</li>
+                <li><strong>Named parameters</strong> — clean, intuitive argument parsing with clap</li>
+                <li><strong>Hidden password input</strong> — secure interactive prompts, never in shell history</li>
+                <li><strong>Clipboard integration</strong> — copy passwords with automatic timed clearing</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- Tech Specs -->
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-label">Tech Stack</div>
+            <h2>Engineered for Performance</h2>
+            <p>Built with Rust for speed, safety, and a minimal footprint.</p>
+        </div>
+        <div class="tech-grid">
+            <div class="tech-card">
+                <div class="tech-value">Rust</div>
+                <div class="tech-label">Memory-safe language</div>
+            </div>
+            <div class="tech-card">
+                <div class="tech-value">Slint</div>
+                <div class="tech-label">Native GUI framework</div>
+            </div>
+            <div class="tech-card">
+                <div class="tech-value">Argon2id</div>
+                <div class="tech-label">Key derivation</div>
+            </div>
+            <div class="tech-card">
+                <div class="tech-value">AES-256</div>
+                <div class="tech-label">GCM encryption</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA / Download -->
+<section class="cta-section" id="download">
+    <div class="container">
+        <div class="cta-card">
+            <div class="section-label">Get Started</div>
+            <h2>Ready to Take Control?</h2>
+            <p>Download Passlock today. One-time purchase. No subscription. No cloud. Just security.</p>
+            <div class="cta-buttons">
+                <button class="btn btn-primary btn-large" onclick="event.preventDefault()" title="Coming soon">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Download Setup.exe
+                </button>
+                <button id="purchase" class="btn btn-secondary btn-large" onclick="event.preventDefault()" title="Coming soon">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="1" y="5" width="22" height="14" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+                    </svg>
+                    Purchase License
+                </button>
+            </div>
+            <p style="margin-top: 24px; font-size: 0.9rem; color: var(--text-muted);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: -2px; margin-right: 4px; opacity: 0.6;"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+                Windows 10/11 x64 &middot; macOS &amp; Linux coming soon
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer>
+    <div class="container">
+        <p class="copyright">&copy; 2024&ndash;2026 Passlock. All rights reserved.</p>
+        <ul class="footer-links">
+            <li><a href="#">Privacy Policy</a></li>
+            <li><a href="#">Terms of Service</a></li>
+            <li><a href="#">Contact</a></li>
+        </ul>
+    </div>
+</footer>
+
+</body>
+</html>
